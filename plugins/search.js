@@ -1,6 +1,7 @@
 /** @module search */
+const Promise = require('bluebird');
 const _       = require('lodash');
-const request = require('request');
+const request = Promise.promisifyAll(require('request'));
 
 const sites = [
     [ "mdn",     "developer.mozilla.org " ]
@@ -21,7 +22,7 @@ function getSiteUrl(siteName) {
   return false
 }
 
-function search(data, userData, callback) {
+var search = Promise.method(function(data, userData) {
   //var userText = "<@"+slack.hook.user_id+"|"+slack.hook.user_name+">";
   var searchURL = 'https://ajax.googleapis.com/ajax/services/search/web';
   var site = data.matches[1];
@@ -30,48 +31,36 @@ function search(data, userData, callback) {
   if(siteUrl) {
     query = 'site:'+siteUrl+query
   }
-  console.log(site, query)
-  request({
+
+  return request.getAsync({
     url: searchURL,
     qs: {
       "v": "1.0",
       "q": query
     }
-  }, function(error, response, body){
-    	if(!error && response.statusCode==200) {
-		var results = JSON.parse(body);
-		//console.log(JSON.stringify(results,' ',1));
-		if(results.responseData != null && !!results.responseData.results.length) {
-      var resultUrl = results.responseData.results[0].unescapedUrl;
-      var resultTitle = results.responseData.results[0].titleNoFormatting;
-      var resultMore = results.responseData.cursor.moreResultsUrl;
-			callback({
-        username: "Search Results",
-        icon_emoji: ":mag_right:",
-        text: [
-          "<"+resultUrl+"|"+resultTitle+">",
-          "<"+resultMore+"|See More Results\u2026>"
-        ].join('\n')
-      });
-		}
-	}
+  })
+  .spread(function(response, body){
+    if(response.statusCode==200) {
+		  var results = JSON.parse(body);
+		  if(results.responseData != null && !!results.responseData.results.length) {
+        var resultUrl = results.responseData.results[0].unescapedUrl;
+        var resultTitle = results.responseData.results[0].titleNoFormatting;
+        var resultMore = results.responseData.cursor.moreResultsUrl;
+        return {
+          username: "Search Results",
+          icon_emoji: ":mag_right:",
+          text: [
+            "<"+resultUrl+"|"+resultTitle+">",
+            "<"+resultMore+"|See More Results\u2026>"
+          ].join('\n')
+        }
+		  }
+    }
   });
-}
+});
 
 exports.load = function(registry) {
-	registry.register('google', search, 'Perform a google search');
-	registry.register('g', search, 'Perform a google search');
-	sites.forEach(function(s) {
-		registry.register(s[0],function(slack) { 
-			slack.hook.text = s[1]+slack.hook.text; 
-			search(slack)
-		}, "Perform a google search contained to "+s[1]);
-	});
-	return true;
-}
-
-exports.load = function(registry) {
-  var helpText = 'Perform a serch';
+  var helpText = 'Perform a search';
   registry.register(
     //plugin name
     'google search', 

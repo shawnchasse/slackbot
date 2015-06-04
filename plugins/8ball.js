@@ -1,6 +1,7 @@
 /**
 	Magic 8Ball
 */
+const Promise = require('bluebird');
 const answers = [
 "It is certain",
 "It is decidedly so",
@@ -37,16 +38,13 @@ const keywords = [
 	"would", "wouldn't"
 ]
 
-function fortune(data, userData, callback) {
-	callback({
+var fortune = Promise.method(function(data, userData) {
+	return {
 		username: "Magic 8Ball",
-		//username: "Mαnny Pelαrinos",
-		//icon_url: "https://s3-us-west-2.amazonaws.com/slack-files2/avatars/2014-06-19/2404438073_48.jpg",
 		icon_url: "http://asphyxia.com/8ball.png",
-		//text: "<@"+userData.user.id+"|"+userData.user.real_name+">" asked: *"+slack.hook.text+"*\n"+answers[Math.floor(answers.length*Math.random())]"
 		text: answers[Math.floor(answers.length*Math.random())]
-	});
-}
+	}
+});
 
 exports.load = function(registry) {
 	var helpText = 'Ask me a yes/no question.';

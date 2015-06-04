@@ -2,9 +2,12 @@
 Slack Webhook Handler
 */
 "use strict";
-const request = require('request');
+//const request = require('request');
 const WebSocket = require('ws');
 const _ = require('lodash');
+const Promise = require('bluebird');
+const request = Promise.promisifyAll(require("request"));
+
 var ws
 var messageID = 0;
 var ws_retries = 0;
@@ -35,23 +38,24 @@ conf.plugins.forEach(function(name) {
 	const status = plugin.load(pluginRegistry);
 });
 
-function getUserData(data, callback) {
-	request({
+// uses promises
+var getUserData = Promise.method(function(data) {
+	return request.getAsync({
 		url: "https://slack.com/api/users.info",
 		qs: { 
 			token: conf.api_token,
 			user: data.user
 		}
-	}, function(error, response, body) {
-		if(!error && response.statusCode == 200) {
+	}).spread(function(response, body) {
+		if(response.statusCode == 200) {
 			var userData = JSON.parse(body);
 			// run our callback with the results
-			callback(body)
+			return body
 		}
-	});
-}
+	}).error(function(err) { return false });
+});
 
-function sendMessage(channel, message, callback) {
+var sendMessage = Promise.method(function(channel, message) {
 	var queryParams = _.merge(
 		{
 			token: conf.api_token,
@@ -63,19 +67,21 @@ function sendMessage(channel, message, callback) {
 		},
 		message
 	);
-	console.log(JSON.stringify(queryParams))
-	request({
+	// make sure the attachments value is a JSON string
+	if(queryParams.attachments) {
+		queryParams.attachments = JSON.stringify(queryParams.attachments)
+	}
+	return request.getAsync({
 		url: "https://slack.com/api/chat.postMessage",
 		method: "POST",
 		qs: queryParams
-	}, function(error, response, body) {
-		if(!error && response.statusCode == 200) {
+	}).spread(function(response, body) {
+		if(response.statusCode == 200) {
 			var userData = JSON.parse(body);
-			// run our callback with the results
-			if(!!callback) { callback(body) }
+			return body
 		}
 	});
-}
+});
 
 function openWebsocket(socket) {
 	var ME = socket.self.id;
@@ -105,30 +111,19 @@ function openWebsocket(socket) {
 
 		if(data.type == "message") {
 			text = data.text ? data.text.trim() : null
-			//console.log(data.type,' -> ',text);
 			if(!data.subtype) {
 				// plain message
 				_.forOwn(pluginRegistry.commands, function(command, name) {
-					//console.log('checking', name, command.r.toString());
 					if(command.r.test(text)) {
-						//console.log('running', name);
 						data.matches = command.r.exec(text);
-						getUserData(data, function(userData) {
+						getUserData(data)
+						.then(function(userData) {
 							var userData = JSON.parse(userData)
-							command.f(data, userData, function(message) {
-								//console.log("message", JSON.stringify(message))
-								sendMessage(data.channel,message)
-								/*ws.send(JSON.stringify(_.merge(
-								 	message, 
-									{
-										id: ++messageID,
-										channel: data.channel,
-										type: "message"
-									}
-								)), { mask: true });
-								*/
-							})
+							return command.f(data, userData)
 						})
+						.then(function(message) {
+							sendMessage(data.channel,message)
+						});
 					}
 				});
 			}
@@ -138,16 +133,16 @@ function openWebsocket(socket) {
 
 function start() {
 	if(ws_retries++ < ws_max_retries) {
-		request({
+		request.getAsync({
 			url: "https://slack.com/api/rtm.start",
 			qs: { token: conf.rtm_token }
-		}, function(error,response,body) {
-			if(!error && response.statusCode == 200) {
+		}).spread(function(response,body) {
+			if(response.statusCode == 200) {
 				body = JSON.parse(body);
 				openWebsocket(body);
 			} else {
 				// try again
-				console.log("retrying in "+ (ws_retries*5000)+" milliseconds")
+				console.log("retrying in "+ (ws_retries*5000)/1000+" seconds")
 				setTimeout(start, ws_retries*5000)
 			}
 		});

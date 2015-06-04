@@ -1,16 +1,18 @@
+const Promise = require('bluebird');
 var Sandbox = require('sandbox')
   , s = new Sandbox();
 
-function run(data, userData, callback) {
-	console.log(JSON.stringify(data.matches))
+var run = Promise.method(function(data, userData) {
+	//console.log(JSON.stringify(data.matches))
 	var code = data.matches[3];
 
-	s.run(code, function(output) {
-		callback({
-			text: "```"+output.result+"```"
-		});
+	return Promise.resolve(s.run(code))
+	.then(function(output) {
+		console.log("output %s", output)
+		output = JSON.parse(output)
+		return { text: "```"+output.result+"```" }
 	});
-}
+});
 
 exports.load = function(registry) {
 	var helpText = 'paste me some code.';

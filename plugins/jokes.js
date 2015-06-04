@@ -1,29 +1,29 @@
 /** @module jira */
-
+const Promise = require('bluebird')
 const _       = require('lodash');
-const request = require('request');
+const request = Promise.promisifyAll(require("request"));
 
-function jokes(data, userData, callback) {
+var jokes = Promise.method(function(data, userData) {
   var URL = 'http://api.icndb.com/jokes/random';
-  request({
+  return request.getAsync({
     url: URL,
     qs: {
     	escape: 'javascript',
     	exclude: '[explicit]'
     }
-  }, function(error, response, body){
-    	if(!error && response.statusCode==200) {
-		var results = JSON.parse(body);
-		if(results != null && results.type == "success") {
-			callback({
-				username: "Chuck Norris",
-				icon_url: "http://www.bf4-emblems.com/wp-content/uploads/2013/11/Chuck-Norris.jpg",
-				text: results.value.joke
-			});
+  }).spread(function(response, body){
+ 		if(response.statusCode==200) {
+			var results = JSON.parse(body);
+			if(results != null && results.type == "success") {
+				return {
+					username: "Chuck Norris",
+					icon_url: "http://www.bf4-emblems.com/wp-content/uploads/2013/11/Chuck-Norris.jpg",
+					text: results.value.joke
+				}
+			}
 		}
-	}
   });
-}
+});
 
 exports.load = function(registry) {
 	registry.register(

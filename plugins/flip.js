@@ -2,6 +2,7 @@
  * @module flip
  */
 "use strict";
+const Promise = require('bluebird');
 const chars = {
     'a' : '\u0250',
     'b' : 'q',
@@ -52,17 +53,19 @@ const chars = {
     '\\' : '/'
 }
 
-function flip(data, userData, callback) {
+var flip = Promise.method(function(data, userData) {
     var text = data.matches[1];
     var flippedText = '(╯°□°）╯︵ ' + text.toLowerCase().split('').map(function(c) {
             return chars[c] ? chars[c] : c;
     }).reverse().join('');
-    callback({
+    
+    // Return from the Promise
+    return {
         text: flippedText,
         username: userData.user.real_name,
         icon_url: userData.user.profile.image_48
-    });
-}
+    };
+});
 
 exports.load = function(registry) {
     var helpText = 'Flip some text!!!';

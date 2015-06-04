@@ -1,7 +1,6 @@
-var request = require('request');
-var _ = require('lodash')
+const Promise = require('bluebird')
 
-function greet(data, userData, callback) {
+var greet = Promise.method(function(data, userData) {
 	if(userData && userData.user) {
 		var user_id = userData.user.id || '';
 		var user_name = userData.user.profile.real_name_normalized || '';
@@ -11,10 +10,9 @@ function greet(data, userData, callback) {
 			.replace("{id}", user_id || '')
 			.replace("{name}", user_name || '');
 		
-		//console.log(greeting)
-		callback({text: greeting});
+		return {text: greeting}
 	}
-}
+})
 
 exports.load = function(registry) {
 	var helpText = null;
