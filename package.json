@@ -7,6 +7,7 @@
     "moment": "^2.7.0",
     "request": "^2.37.0",
     "sandbox": "^0.8.6",
+    "tough-cookie": "^2.0.0",
     "weather.js": "0.0.2",
     "ws": "^0.6.3",
     "yql": "^1.0.2"

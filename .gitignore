@@ -28,4 +28,4 @@ node_modules
 
 # app specific things
 config.json
-plugins/jira.js
+plugins/jira_config.json
