@@ -83,7 +83,7 @@ exports.load = function(registry) {
 		//plugin name
 		'jira', 
 		// trigger regex
-		new RegExp("[^ <]*(espnjira.disney.com|jira.espn.com).+?\/([^ >]+)",'im'),  
+		new RegExp("[^ <]*("+_.keys(config).join('|')+").+?\/([^ >]+)",'im'),  
 		// function to run
 		getJiraTicket, 
 		// help text
