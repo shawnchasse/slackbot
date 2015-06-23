@@ -20,9 +20,10 @@ var forecast = Promise.method(function(data, userData) {
 	  });
 	  var locationTitle = location.city + ', ' + (!!(location.region.length) ? location.region : location.country);
 	  return {
-			username: "Conditions for "+locationTitle,
+			username: "Current Conditions",
 			icon_url: "http://asphyxia.com/weather/png/"+condition.code+".png",
 			text: [
+				'*'+locationTitle+'*\n',
 				condition.text,
 				condition.temp+'\u00B0'
 			].join(' ')/*,
