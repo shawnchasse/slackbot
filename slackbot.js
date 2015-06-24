@@ -56,31 +56,59 @@ var getUserData = Promise.method(function(data) {
 });
 
 var sendMessage = Promise.method(function(channel, message) {
-	var queryParams = _.merge(
-		{
-			token: conf.api_token,
-			channel: channel,
-			username: conf.username,
-			icon_url: conf.icon_url,
-			as_user: false,
-			link_names: 1
-		},
-		message
-	);
+	var queryParams = {}
+	if(message.filetype) {
+		queryParams = _.merge(
+			{
+				token: conf.api_token,
+				channels: channel
+			},
+			message
+		);
+	} else {
+		queryParams = _.merge(
+			{
+				token: conf.api_token,
+				channel: channel,
+				username: conf.username,
+				icon_url: conf.icon_url,
+				as_user: false,
+				link_names: 1
+			},
+			message
+		);
+	}
 	// make sure the attachments value is a JSON string
 	if(queryParams.attachments) {
 		queryParams.attachments = JSON.stringify(queryParams.attachments)
 	}
-	return request.getAsync({
-		url: "https://slack.com/api/chat.postMessage",
-		method: "POST",
-		qs: queryParams
-	}).spread(function(response, body) {
-		if(response.statusCode == 200) {
-			var userData = JSON.parse(body);
-			return body
-		}
-	});
+	if(queryParams.filetype != null) {
+		return request.postAsync({
+			url: "https://slack.com/api/files.upload",
+			method: "POST",
+			qs: queryParams
+		}).spread(function(response, body) {
+			if(response.statusCode == 200) {
+				var userData = JSON.parse(body);
+				return body
+			} else {
+				console.log(response,body)
+			}
+		}).error(function(e){
+			console.log(e)
+		});
+	} else {
+		return request.getAsync({
+			url: "https://slack.com/api/chat.postMessage",
+			method: "POST",
+			qs: queryParams
+		}).spread(function(response, body) {
+			if(response.statusCode == 200) {
+				var userData = JSON.parse(body);
+				return body
+			}
+		});
+	}
 });
 
 function openWebsocket(socket) {
