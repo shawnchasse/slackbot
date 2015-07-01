@@ -110,6 +110,43 @@ var loadJiraTicket = Promise.method(function(ticketURL) {
 	})
 })
 
+var createJira = Promise.method(function(data, userData) {
+	var key         = data.matches[1];
+	var summary     = data.matches[2];
+	var description = data.matches[3];
+	var payload = {
+		"fields": {
+			"project":
+			{ 
+				"key": key.toUpperCase()
+			},
+			"summary": summary.split('=')[1],
+			"description": description.split('=')[1],
+			"issuetype": {
+				"name": "Story"
+			}
+		}
+	};
+	return login(defaultDomain)
+	.spread(function(response, body){
+		return request.postAsync({
+			jar: jira_jar,
+			url: 'https://'+defaultDomain+'/rest/api/2/issue/',
+			method: 'POST',
+			body: payload,
+			json: true
+		})
+	})
+	.spread(function(response, body){
+		var ticket = body;
+		var ticketURL = 'https://'+defaultDomain+'/rest/api/2/issue/'+ticket.key;
+		return loadJiraTicket(ticketURL)
+	})
+	.spread(function(response, body){
+		return processTicketApiResponse(defaultDomain, response, body);
+	});
+})
+
 // process the jira api response
 function processTicketApiResponse(domain, response, body) {
 	try {
@@ -169,5 +206,16 @@ exports.load = function(registry) {
 		helpText  
 	);
 
+	// search jira via jql
+	registry.register(
+		//plugin name
+		'jira-create', 
+		// trigger regex
+		/^[`!]jira create[\s]+?([^]*?)[\s]+(summary=[^]*?)[\s]+(description=[^]*?)$/im,  
+		// function to run
+		createJira, 
+		// help text
+		'Create a JIRA ticket'  
+	);
 	return true;
 }
